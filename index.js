@@ -200,7 +200,7 @@ class Globe3D {
   }
 
   /**
-   * Enhanced fragment shader with golden center glow and dark continents
+   * Enhanced fragment shader with dark center glow and dark continents
    */
   getOptimizedFragmentShader() {
     return `
@@ -216,16 +216,16 @@ class Globe3D {
         float alpha = 1.0 - texture2D(alphaTexture, vUv).r;
         vec3 color = texture2D(colorTexture, vUv).rgb;
         
-        // Create golden glow from center
+        // Create dark center glow from center
         vec2 center = vec2(0.5, 0.5);
         float distanceFromCenter = length(vUv - center);
         
-        // Golden glow that spreads from center to edges
-        float goldenGlow = 1.0 - smoothstep(0.0, 0.7, distanceFromCenter);
-        goldenGlow = pow(goldenGlow, 2.0);
+        // Dark glow that spreads from center to edges
+        float centerGlow = 1.0 - smoothstep(0.0, 0.8, distanceFromCenter);
+        centerGlow = pow(centerGlow, 1.5); // Smoother falloff
         
-        // Golden yellow color
-        vec3 goldenColor = vec3(1.0, 0.8, 0.3);
+        // Dark blue-green center color (#0A181B)
+        vec3 centerColor = vec3(0.039, 0.094, 0.106); // Convert #0A181B to RGB
         
         // Make continents dark with white highlights
         // Use the green channel to detect land vs water
@@ -257,17 +257,18 @@ class Globe3D {
         // Use landMask to determine if we're on land or water
         color = mix(color * 0.3, continentColor, step(0.5, landMask)); // Darken oceans
         
-        // Mix the golden glow with the modified earth texture
-        color = mix(color, goldenColor, goldenGlow * 0.4);
+        // Mix the dark center glow with the modified earth texture
+        color = mix(color, centerColor, centerGlow * 0.6); // Increased influence
         
-        // Add additional inner glow for more intensity
-        float innerGlow = 1.0 - smoothstep(0.0, 0.4, distanceFromCenter);
-        innerGlow = pow(innerGlow, 3.0);
-        color += goldenColor * innerGlow * 0.6;
+        // Add additional inner glow for more intensity and smooth blending
+        float innerGlow = 1.0 - smoothstep(0.0, 0.5, distanceFromCenter);
+        innerGlow = pow(innerGlow, 2.0); // Smoother falloff
+        color += centerColor * innerGlow * 0.8;
         
-        // Fade edges to blend with dark background
-        float edgeFade = smoothstep(0.6, 1.0, distanceFromCenter);
-        alpha *= (1.0 - edgeFade * 0.7);
+        // Enhanced smooth edge fade to blend with dark background
+        float edgeFade = smoothstep(0.5, 1.0, distanceFromCenter);
+        edgeFade = pow(edgeFade, 1.5); // Smoother transition
+        alpha *= (1.0 - edgeFade * 0.8);
         
         gl_FragColor = vec4(color, alpha);
       }
@@ -303,10 +304,10 @@ class Globe3D {
   }
 
   /**
-   * Create golden core glow inside Earth
+   * Create dark core glow inside Earth
    */
   createGoldenCore() {
-    // Create inner sphere for the golden core
+    // Create inner sphere for the dark center core
     const coreGeometry = new THREE.SphereGeometry(CONFIG.GLOBE.radius * 0.85, 32, 32);
     
     const coreMaterial = new THREE.ShaderMaterial({
@@ -332,24 +333,24 @@ class Globe3D {
           // Distance from center
           float distanceFromCenter = length(vPosition);
           
-          // Create radial golden glow
+          // Create radial dark center glow
           float glow = 1.0 - smoothstep(0.0, 1.0, distanceFromCenter);
           glow = pow(glow, 1.5);
           
-          // Pulsing effect
-          float pulse = 0.8 + 0.2 * sin(time * 2.0);
+          // Pulsing effect for smooth breathing
+          float pulse = 0.7 + 0.3 * sin(time * 1.5);
           
-          // Golden color with varying intensity
-          vec3 goldenColor = vec3(1.0, 0.8, 0.2);
+          // Dark blue-green color matching center (#0A181B)
+          vec3 centerColor = vec3(0.039, 0.094, 0.106);
           
-          // View angle for rim lighting
+          // View angle for rim lighting with smoother falloff
           vec3 viewDirection = normalize(cameraPosition - vPosition);
           float rim = 1.0 - max(0.0, dot(vNormal, viewDirection));
-          rim = pow(rim, 2.0);
+          rim = pow(rim, 1.5); // Smoother rim
           
           float alpha = glow * pulse * 0.6 + rim * 0.3;
           
-          gl_FragColor = vec4(goldenColor, alpha);
+          gl_FragColor = vec4(centerColor, alpha);
         }
       `,
       transparent: true,
