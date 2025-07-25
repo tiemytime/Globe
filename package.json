@@ -1,0 +1,45 @@
+{
+  "name": "smooth-globe-3d",
+  "version": "2.0.0",
+  "description": "High-performance 3D globe with smooth surface and optimized rendering",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "python3 -m http.server 8000",
+    "lint": "eslint src/ index.js",
+    "clean": "rm -rf dist/ node_modules/.cache/"
+  },
+  "keywords": [
+    "threejs",
+    "3d",
+    "globe",
+    "earth",
+    "smooth",
+    "performance",
+    "webgl",
+    "optimization"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "eslint": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "bugs": {
+    "url": "https://github.com/issues"
+  },
+  "homepage": "."
+}
