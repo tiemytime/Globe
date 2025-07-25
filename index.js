@@ -200,7 +200,7 @@ class Globe3D {
   }
 
   /**
-   * Enhanced fragment shader with golden center glow
+   * Enhanced fragment shader with golden center glow and dark continents
    */
   getOptimizedFragmentShader() {
     return `
@@ -222,12 +222,42 @@ class Globe3D {
         
         // Golden glow that spreads from center to edges
         float goldenGlow = 1.0 - smoothstep(0.0, 0.7, distanceFromCenter);
-        goldenGlow = pow(goldenGlow, 2.0); // Make it more concentrated in center
+        goldenGlow = pow(goldenGlow, 2.0);
         
         // Golden yellow color
         vec3 goldenColor = vec3(1.0, 0.8, 0.3);
         
-        // Mix the golden glow with the earth texture
+        // Make continents dark with white highlights
+        // Use the green channel to detect land vs water
+        float landMask = color.g;
+        
+        // Create dark continent base color
+        vec3 darkContinentColor = vec3(0.15, 0.18, 0.22); // Dark blue-gray
+        
+        // Edge detection for continent borders
+        vec2 texelSize = vec2(1.0) / vec2(1024.0); // Assuming 1k texture
+        
+        // Sample neighboring pixels for edge detection
+        float landLeft = texture2D(colorTexture, vUv + vec2(-texelSize.x, 0.0)).g;
+        float landRight = texture2D(colorTexture, vUv + vec2(texelSize.x, 0.0)).g;
+        float landUp = texture2D(colorTexture, vUv + vec2(0.0, -texelSize.y)).g;
+        float landDown = texture2D(colorTexture, vUv + vec2(0.0, texelSize.y)).g;
+        
+        // Calculate edge intensity
+        float edgeIntensity = abs(landMask - landLeft) + abs(landMask - landRight) + 
+                             abs(landMask - landUp) + abs(landMask - landDown);
+        edgeIntensity = smoothstep(0.1, 0.3, edgeIntensity);
+        
+        // White border highlight
+        vec3 borderHighlight = vec3(0.8, 0.85, 0.9) * edgeIntensity;
+        
+        // Mix dark continent color with border highlights
+        vec3 continentColor = darkContinentColor + borderHighlight;
+        
+        // Use landMask to determine if we're on land or water
+        color = mix(color * 0.3, continentColor, step(0.5, landMask)); // Darken oceans
+        
+        // Mix the golden glow with the modified earth texture
         color = mix(color, goldenColor, goldenGlow * 0.4);
         
         // Add additional inner glow for more intensity
