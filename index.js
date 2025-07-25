@@ -28,7 +28,7 @@ const CONFIG = {
     hemisphereIntensity: 2.5
   },
   STARS: {
-    count: 3000, // Reduced for better performance
+    count: 10000, // Significantly increased for realistic galaxy density
     size: 0.15
   }
 };
