@@ -43,6 +43,7 @@ class Globe3D {
     this.renderer = null;
     this.controls = null;
     this.globeGroup = null;
+    this.goldenCore = null;
     this.animationId = null;
     
     this.init();
@@ -135,6 +136,7 @@ class Globe3D {
 
     this.createWireframe();
     this.createSmoothSurface();
+    this.createGoldenCore();
   }
 
   /**
@@ -198,7 +200,7 @@ class Globe3D {
   }
 
   /**
-   * Optimized fragment shader
+   * Enhanced fragment shader with golden center glow
    */
   getOptimizedFragmentShader() {
     return `
@@ -213,6 +215,29 @@ class Globe3D {
         
         float alpha = 1.0 - texture2D(alphaTexture, vUv).r;
         vec3 color = texture2D(colorTexture, vUv).rgb;
+        
+        // Create golden glow from center
+        vec2 center = vec2(0.5, 0.5);
+        float distanceFromCenter = length(vUv - center);
+        
+        // Golden glow that spreads from center to edges
+        float goldenGlow = 1.0 - smoothstep(0.0, 0.7, distanceFromCenter);
+        goldenGlow = pow(goldenGlow, 2.0); // Make it more concentrated in center
+        
+        // Golden yellow color
+        vec3 goldenColor = vec3(1.0, 0.8, 0.3);
+        
+        // Mix the golden glow with the earth texture
+        color = mix(color, goldenColor, goldenGlow * 0.4);
+        
+        // Add additional inner glow for more intensity
+        float innerGlow = 1.0 - smoothstep(0.0, 0.4, distanceFromCenter);
+        innerGlow = pow(innerGlow, 3.0);
+        color += goldenColor * innerGlow * 0.6;
+        
+        // Fade edges to blend with dark background
+        float edgeFade = smoothstep(0.6, 1.0, distanceFromCenter);
+        alpha *= (1.0 - edgeFade * 0.7);
         
         gl_FragColor = vec4(color, alpha);
       }
@@ -245,6 +270,68 @@ class Globe3D {
       sprite: this.textures.starSprite
     });
     this.scene.add(stars);
+  }
+
+  /**
+   * Create golden core glow inside Earth
+   */
+  createGoldenCore() {
+    // Create inner sphere for the golden core
+    const coreGeometry = new THREE.SphereGeometry(CONFIG.GLOBE.radius * 0.85, 32, 32);
+    
+    const coreMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        time: { value: 0.0 }
+      },
+      vertexShader: `
+        varying vec3 vPosition;
+        varying vec3 vNormal;
+        
+        void main() {
+          vPosition = position;
+          vNormal = normal;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float time;
+        varying vec3 vPosition;
+        varying vec3 vNormal;
+        
+        void main() {
+          // Distance from center
+          float distanceFromCenter = length(vPosition);
+          
+          // Create radial golden glow
+          float glow = 1.0 - smoothstep(0.0, 1.0, distanceFromCenter);
+          glow = pow(glow, 1.5);
+          
+          // Pulsing effect
+          float pulse = 0.8 + 0.2 * sin(time * 2.0);
+          
+          // Golden color with varying intensity
+          vec3 goldenColor = vec3(1.0, 0.8, 0.2);
+          
+          // View angle for rim lighting
+          vec3 viewDirection = normalize(cameraPosition - vPosition);
+          float rim = 1.0 - max(0.0, dot(vNormal, viewDirection));
+          rim = pow(rim, 2.0);
+          
+          float alpha = glow * pulse * 0.6 + rim * 0.3;
+          
+          gl_FragColor = vec4(goldenColor, alpha);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      side: THREE.BackSide
+    });
+    
+    const core = new THREE.Mesh(coreGeometry, coreMaterial);
+    this.globeGroup.add(core);
+    
+    // Store reference for animation
+    this.goldenCore = core;
   }
 
   /**
@@ -305,6 +392,11 @@ class Globe3D {
     // Smooth globe rotation
     if (this.globeGroup) {
       this.globeGroup.rotation.y += CONFIG.GLOBE.rotationSpeed;
+    }
+    
+    // Update golden core animation
+    if (this.goldenCore) {
+      this.goldenCore.material.uniforms.time.value = Date.now() * 0.001;
     }
     
     // Update controls
